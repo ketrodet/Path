@@ -1,0 +1,49 @@
+
+const WebSocket = require('ws');
+const { Connection, clusterApiUrl, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } = require('@solana/web3.js');
+const logger = require('./logger'); // Подключаем логгер
+
+const monitoredAddress = '65BJBNJm5i4VYad9yqvFVpg9Gw2d6uWb33JrwtyyCaB4';
+const connection = new Connection(clusterApiUrl('mainnet-beta'));
+const ws = new WebSocket('wss://api.mainnet-beta.solana.com/');
+
+ws.on('open', () => {
+    logger.info('WebSocket соединение открыто.');
+    const subscriptionMessage = JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'logsSubscribe',
+        params: [
+            { mentions: [monitoredAddress] },
+            { commitment: 'processed' }
+        ]
+    });
+    ws.send(subscriptionMessage);
+    logger.info({ subscriptionMessage }, 'Сообщение подписки отправлено');
+});
+
+ws.on('message', (data) => {
+    try {
+        const parsedData = JSON.parse(data);
+        logger.debug({ parsedData }, 'Получено сообщение от сервера');
+
+        if (parsedData.method === 'logsNotification') {
+            const logs = parsedData.params?.result?.value?.logs || [];
+            const signature = parsedData.params?.result?.value?.signature;
+            const error = parsedData.params?.result?.value?.err;
+
+            if (error) {
+                logger.warn({ error }, 'Транзакция с ошибкой, пропускаем');
+                return;
+            }
+
+            const isRadiumSwap = logs.some(log => log.includes('Program 675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'));
+            if (isRadiumSwap) {
+                logger.info({ signature }, 'Обнаружен свап на Radium');
+                sendFrontTransaction(signature);
+            }
+        }
+    } catch (err) {
+        logger.error({ err }, 'Ошибка при обработке сообщения');
+    }
+});
