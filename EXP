@@ -1,0 +1,27 @@
+# Пример простого скрипта на Python
+
+def is_even(n: int) -> bool:
+    """Возвращает True, если число чётное, иначе False."""
+    return n % 2 == 0
+
+
+def main():
+    # Выводим приветствие
+    print("Hello, World!")
+
+    # Запрашиваем у пользователя ввод
+    try:
+        user_input = int(input("Введите целое число: "))
+    except ValueError:
+        print("Ошибка: введено не число.")
+        return
+
+    # Проверяем, чётное ли число
+    if is_even(user_input):
+        print(f"{user_input} — чётное число.")
+    else:
+        print(f"{user_input} — нечётное число.")
+
+
+if __name__ == "__main__":
+    main()
